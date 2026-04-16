@@ -26,6 +26,16 @@ async def run_analysis(analysis_id: str, video_path: str, db: Session):
     - AI 서버 호출 → 결과 DB 저장
     - 성공: status = "done"
     - 실패: status = "failed" + error_message
+
+    AI팀 응답 → DB 필드 매핑:
+      overall_confidence        → confidence
+      manipulated_frame_count   → manipulated_frame_count
+      metrics.fake_ratio        → manipulated_frame_ratio
+      confidence_timeline       → confidence_timeline
+      top_evidence              → top1_frame  (dict 통째로 저장)
+      top_evidence.layercam_base64  → layercam_image
+      top_evidence.spectrum_base64  → frequency_spectrum
+      error                     → error_message
     """
     analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
     if not analysis:
@@ -39,15 +49,22 @@ async def run_analysis(analysis_id: str, video_path: str, db: Session):
         # AI 서버에 분석 요청
         result = await call_ai_server(video_path, analysis_id)
 
-        # 결과 DB 저장
-        analysis.prediction          = result.get("prediction")
-        analysis.confidence          = result.get("confidence")
-        analysis.confidence_timeline = result.get("confidence_timeline")
-        analysis.top1_frame          = result.get("top1_frame")
-        analysis.layercam_image      = result.get("layercam", {}).get("image_base64")
-        analysis.frequency_spectrum  = result.get("frequency_spectrum", {}).get("image_base64")
-        analysis.status              = "done"
-        analysis.finished_at         = datetime.utcnow()
+        # top_evidence 미리 추출 (layercam, spectrum 공통 참조)
+        top_evidence = result.get("top_evidence") or {}
+
+        # ── 결과 DB 저장 ──────────────────────────────────────
+        analysis.prediction             = result.get("prediction")
+        analysis.confidence             = result.get("overall_confidence")         # ✅ 수정
+        analysis.manipulated_frame_count = result.get("manipulated_frame_count")   # ✅ 추가
+        analysis.manipulated_frame_ratio = (result.get("metrics") or {}).get("fake_ratio")  # ✅ 추가
+        analysis.confidence_timeline    = result.get("confidence_timeline")
+        analysis.top1_frame             = top_evidence                             # ✅ 수정 (top_evidence)
+        analysis.layercam_image         = top_evidence.get("layercam_base64")      # ✅ 수정
+        analysis.frequency_spectrum     = top_evidence.get("spectrum_base64")      # ✅ 수정
+        analysis.error_message          = result.get("error")                      # ✅ 수정 (error)
+        analysis.status                 = "done"
+        analysis.finished_at            = datetime.utcnow()
+        # ─────────────────────────────────────────────────────
 
     except Exception as e:
         # AI 서버 오류 시 실패 처리
@@ -138,18 +155,20 @@ def get_analysis(
         )
 
     return AnalysisOut(
-        analysis_id         = analysis.id,
-        video_id            = analysis.video_id,
-        status              = analysis.status,
-        prediction          = analysis.prediction,
-        confidence          = analysis.confidence,
-        confidence_timeline = analysis.confidence_timeline,
-        top1_frame          = analysis.top1_frame,
-        layercam_image      = analysis.layercam_image,
-        frequency_spectrum  = analysis.frequency_spectrum,
-        error_message       = analysis.error_message,
-        created_at          = analysis.created_at,
-        finished_at         = analysis.finished_at,
+        analysis_id              = analysis.id,
+        video_id                 = analysis.video_id,
+        status                   = analysis.status,
+        prediction               = analysis.prediction,
+        confidence               = analysis.confidence,
+        manipulated_frame_count  = analysis.manipulated_frame_count,
+        manipulated_frame_ratio  = analysis.manipulated_frame_ratio,
+        confidence_timeline      = analysis.confidence_timeline,
+        top1_frame               = analysis.top1_frame,
+        layercam_image           = analysis.layercam_image,
+        frequency_spectrum       = analysis.frequency_spectrum,
+        error_message            = analysis.error_message,
+        created_at               = analysis.created_at,
+        finished_at              = analysis.finished_at,
     )
 
 
@@ -173,13 +192,15 @@ def get_my_analyses(
 
     return [
         {
-            "analysis_id": a.id,
-            "video_id":    a.video_id,
-            "status":      a.status,
-            "prediction":  a.prediction,
-            "confidence":  a.confidence,
-            "created_at":  a.created_at,
-            "finished_at": a.finished_at,
+            "analysis_id":            a.id,
+            "video_id":               a.video_id,
+            "status":                 a.status,
+            "prediction":             a.prediction,
+            "confidence":             a.confidence,
+            "manipulated_frame_count": a.manipulated_frame_count,
+            "manipulated_frame_ratio": a.manipulated_frame_ratio,
+            "created_at":             a.created_at,
+            "finished_at":            a.finished_at,
         }
         for a in analyses
     ]
