@@ -23,3 +23,6 @@ uploaded_videos/
 # OS 파일
 .DS_Store
 Thumbs.db
+
+# 가중치 파일
+app/ai/weights/SBI.tar 
