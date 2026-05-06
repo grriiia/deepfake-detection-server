@@ -1,0 +1,99 @@
+Create a full web UI design system and multi-page dashboard for a biometric signal-based deepfake detection service.
+
+Concept:
+This platform detects deepfakes by analyzing physiological blood flow delay patterns across facial regions, especially from jaw to forehead, using a vision Mamba model. The UI should feel trustworthy, scientific, explainable, and suitable for an AI forensic or biomedical signal analysis service.
+
+Design style:
+- dark navy / slate background
+- cyan and blue accent colors
+- rounded cards with soft shadows
+- modern SaaS + AI forensic dashboard aesthetic
+- high readability, structured layout, premium typography
+- clean data visualizations and explainable AI interface
+- serious, reliable, and technically advanced feel
+
+Pages to generate:
+1. Landing page
+2. Login / Signup page
+3. Video upload / live capture page
+4. Pre-analysis quality check page
+5. Analysis progress page
+6. Result page with explainable AI signal visualizations
+7. Analysis history page
+8. Admin dashboard page
+
+Important UI elements:
+- video upload and webcam capture
+- face ROI overlay and alignment guide
+- signal charts for forehead and jaw
+- time delay comparison graph
+- facial heatmap and saliency visualization
+- confidence score, quality score, verdict badge
+- history records and admin analytics
+
+The design should look like a real product that could be presented as a graduation project in AI, computer vision, or healthcare-adjacent digital forensics.
+
+Design a modern AI forensic web landing page for a biometric deepfake detection service. 
+Style: clean, trustworthy, slightly futuristic, dashboard-inspired, dark navy background with cyan and blue accents, rounded cards, subtle shadows.
+Include:
+- top navigation bar with logo, Home, Analyze, History, Dashboard, Login
+- hero section with headline “Biometric Signal-Based Deepfake Detection”
+- subtitle explaining that the system analyzes blood flow time delay from jaw to forehead using a vision Mamba model
+- two CTA buttons: “Start Analysis” and “View Demo”
+- three feature cards: Video Input, Signal Analysis, Explainable Result
+- four-step workflow section
+- preview section showing sample video, ROI overlay, signal graph, heatmap, and final verdict badge
+- footer with project info and privacy policy
+Use a premium SaaS / AI security product aesthetic, balanced spacing, professional typography
+
+Design a login and signup page for an AI-powered biometric deepfake detection web service.
+Layout: split screen.
+Left side: branding area with logo, short product description, and a preview of AI signal analysis dashboard.
+Right side: centered authentication card with email, password, login button, signup link, forgot password, and optional social login.
+Style: modern SaaS security platform, dark navy and slate tones, cyan accent, soft shadows, rounded form fields, minimal and professional.
+
+Design a web page for uploading or capturing a face video for biometric deepfake detection.
+Include:
+- page title “New Deepfake Analysis”
+- progress indicator showing step 1 of 4
+- tabs for “Upload Video” and “Live Camera Capture”
+- large drag-and-drop upload area with file format hints
+- live camera preview card with face alignment guide frame, start/stop recording button, retake button
+- side instruction panel with video capture guidelines: frontal face, visible forehead and jaw, stable lighting, low motion
+- uploaded video preview card with metadata such as duration, resolution, fps
+- primary CTA button “Run Quality Check”
+Style: modern AI dashboard, dark theme, sleek cards, cyan accent, clean spacing, premium UX
+
+Design a pre-analysis quality check page for a biometric deepfake detection platform.
+Include:
+- title “Pre-analysis Quality Check”
+- status badge with Passed / Warning / Failed
+- left panel showing video preview with detected face box and highlighted ROI regions on forehead and jaw
+- frame timeline or thumbnail strip
+- right panel with quality metrics cards: face detected, ROI visibility, lighting quality, motion blur, occlusion, resolution, frame sufficiency
+- an overall quality score gauge from 0 to 100
+- warning box explaining reasons for reduced analysis reliability
+- buttons for “Re-upload Video” and “Continue Analysis”
+Style: explainable AI, forensic dashboard, dark theme with blue/cyan highlights, structured and professional
+
+Design an analysis progress page for an AI biometric deepfake detection service.
+Center the page around a large progress card.
+Include:
+- animated circular or horizontal progress indicator
+- current analysis step labels: Uploading, Extracting Face Regions, Computing Physiological Signals, Vision Mamba Inference, Generating Report
+- left summary card with uploaded video thumbnail, filename, duration
+- right log panel showing completed and active processing steps
+- status text explaining that the system is analyzing blood flow delay patterns across facial regions
+Style: futuristic but professional AI dashboard, dark background, cyan highlights, subtle motion feel, clean and trustworthy
+
+Design a result page for a biometric signal-based deepfake detection web application.
+This should feel like a premium AI forensic dashboard.
+Include:
+- top summary card with final verdict badge (Real / Deepfake Suspected / Uncertain), confidence score, quality score, processing time
+- left large video player card for the original video
+- right explanation card with a short AI-generated summary and 3 key evidence points
+- signal visualization section with multiple line charts: forehead signal, jaw signal, temporal delay comparison, confidence over time
+- facial spatial analysis section with heatmap, ROI map, and attention/saliency visualization
+- quality and limitations panel explaining how lighting, blur, or occlusion affected reliability
+- action buttons: Download Report, Save Result, Analyze Another Video
+Style: dark blue forensic AI dashboard, high clarity, modular cards, cyan highlights, elegant typography, serious and trustworthy

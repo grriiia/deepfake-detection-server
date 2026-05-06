@@ -1,0 +1,28 @@
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+# 가상환경
+.conda/
+venv/
+env/
+
+# 환경변수 (절대 git에 올리면 안 됨 - DB 비밀번호, SECRET_KEY 등)
+.env
+
+# 업로드된 영상 파일 (용량이 크고 개인정보 포함 가능)
+uploaded_videos/
+
+# SQLite DB 파일 (로컬 개발용, git에 올릴 필요 없음)
+*.db
+
+# VS Code 설정
+.vscode/
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 가중치 파일
+app/ai/weights/SBI.tar 
