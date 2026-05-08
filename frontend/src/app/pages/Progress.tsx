@@ -26,7 +26,7 @@ export function Progress() {
 
     const startAnalysis = async () => {
       // LocalStorage에서 토큰 가져오기
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("forensiface_access_token");
 
       if(!token){
         alert("로그인 정보가 없습니다. 다시 로그인해주세요.");

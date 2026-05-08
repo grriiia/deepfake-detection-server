@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { Activity, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
+import { apiClient } from "../../api/client";
 
 export function Navigation() {
   const location = useLocation();
@@ -9,12 +10,23 @@ export function Navigation() {
 
   useEffect(() => {
     // Check if token exists in localStorage
-    const token = localStorage.getItem("access_token");
-    setIsLoggedIn(!!token);
-  }, [location]); // Re-check on every navigation
+    const token = localStorage.getItem("forensiface_access_token");
+    
+    // "null" 이나 "undefined" 문자열이 저장되어 있는 경우 방지
+    const isValidToken = !!token && token !== "undefined" && token !== "null";
+    setIsLoggedIn(isValidToken);
+
+    // 토큰이 있다면 실제 유효한지 백엔드에 한 번 확인해봅니다 (선택사항)
+    if (isValidToken) {
+      apiClient.get("/auth/me").catch(() => {
+        setIsLoggedIn(false);
+        localStorage.removeItem("forensiface_access_token");
+      });
+    }
+  }, [location]);
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
+    localStorage.removeItem("forensiface_access_token");
     setIsLoggedIn(false);
     navigate("/");
   };

@@ -9,8 +9,8 @@ export const apiClient = axios.create({
 
 // 모든 요청에 JWT 토큰을 자동으로 포함시키는 인터셉터
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
+  const token = localStorage.getItem('forensiface_access_token');
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -21,6 +21,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      localStorage.removeItem('forensiface_access_token');
       window.location.href = '/login';
     }
     return Promise.reject(error);

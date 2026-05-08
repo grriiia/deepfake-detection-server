@@ -28,7 +28,7 @@ export function Analyze() {
 
     try {
       // 로컬 스토리지에서 토큰 직접 가져오기
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("forensiface_access_token");
 
       // API 호출: POST /api/v1/videos/upload
       const response = await apiClient.post("/videos/upload", formData, {

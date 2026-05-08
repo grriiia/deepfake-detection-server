@@ -28,7 +28,7 @@ export function Login() {
 
       // 토큰 저장
       const { access_token } = response.data;
-      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("forensiface_access_token", access_token);
 
       // 분석 페이지로 이동
       navigate("/analyze");

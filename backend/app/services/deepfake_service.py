@@ -98,12 +98,20 @@ def _get_layercam_map(model: torch.nn.Module, face_tensor: torch.Tensor, origina
         return None
         
     act = features[0].squeeze().cpu().numpy()
-    cam = np.mean(act, axis=0)
+    if act.ndim == 3:
+        cam = np.mean(act, axis=0)
+    else:
+        cam = act
+
     cam = np.maximum(cam, 0)
-    cam = cam / (np.max(cam) + 1e-7)
+    denom = np.max(cam)
+    if denom > 0:
+        cam = cam / denom
+    
     cam = cv2.resize(cam, (380, 380))
     
-    heatmap_input = (255 * cam).astype(np.uint8)
+    # OpenCV applyColorMap은 반드시 uint8 형태의 CV_8UC1 또는 CV_8UC3여야 함
+    heatmap_input = np.ascontiguousarray((255 * cam).astype(np.uint8))
     heatmap = cv2.applyColorMap(heatmap_input, cv2.COLORMAP_JET)
     
     # 가시성을 위해 원본과 합성 (60% 히트맵)
@@ -114,14 +122,20 @@ def _get_layercam_map(model: torch.nn.Module, face_tensor: torch.Tensor, origina
 
 def _get_frequency_spectrum(gray_img: np.ndarray) -> str:
     """주파수 스펙트럼(FFT) 분석 맵 생성"""
+    if gray_img.size == 0:
+        return ""
+
     f = np.fft.fft2(gray_img)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
     
-    magnitude_spectrum = np.clip(
-        255 * (magnitude_spectrum / (np.max(magnitude_spectrum) + 1e-7)), 
-        0, 255
-    ).astype(np.uint8)
+    denom = np.max(magnitude_spectrum)
+    if denom > 0:
+        magnitude_spectrum = 255 * (magnitude_spectrum / denom)
+    else:
+        magnitude_spectrum = np.zeros_like(magnitude_spectrum)
+        
+    magnitude_spectrum = np.ascontiguousarray(np.clip(magnitude_spectrum, 0, 255).astype(np.uint8))
     
     heatmap = cv2.applyColorMap(magnitude_spectrum, cv2.COLORMAP_VIRIDIS)
     _, buffer = cv2.imencode('.jpg', heatmap)
@@ -130,8 +144,11 @@ def _get_frequency_spectrum(gray_img: np.ndarray) -> str:
 
 def _get_texture_map(gray_img: np.ndarray) -> str:
     """텍스처 일관성(Laplacian) 맵 생성"""
+    if gray_img.size == 0:
+        return ""
+
     laplacian = np.absolute(cv2.Laplacian(gray_img, cv2.CV_64F))
-    texture_input = np.clip(laplacian * 4, 0, 255).astype(np.uint8)
+    texture_input = np.ascontiguousarray(np.clip(laplacian * 4, 0, 255).astype(np.uint8))
     
     heatmap = cv2.applyColorMap(texture_input, cv2.COLORMAP_HOT)
     _, buffer = cv2.imencode('.jpg', heatmap)
