@@ -1,11 +1,15 @@
-import { useLocation, Navigate, Link } from "react-router";
+import { useLocation, Navigate, Link, useNavigate } from "react-router";
 import { Download, Save, RotateCcw, CheckCircle, AlertTriangle, Clock, Video, TrendingUp, Activity, Zap, FileVideo } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Tooltip } from "../components/Tooltip";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+import { toast } from "sonner";
 
 export function Result() {
   const location = useLocation();
+  const navigate = useNavigate();
   const analysisData = location.state?.analysisData;
 
   // Redirect if no data
@@ -30,6 +34,164 @@ export function Result() {
   const isReal = prediction === "real";
   const displayPrediction = isReal ? "진짜" : "가짜";
   const displayConfidence = isReal ? (1 - confidence) * 100 : confidence * 100;
+
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadReport = async () => {
+    if (!reportRef.current) return;
+
+    setIsExporting(true);
+    
+    // 캡처 전 스크롤을 최상단으로 이동 (html2canvas 오동작 방지)
+    window.scrollTo(0, 0);
+
+    try {
+      console.log("Starting report export process...");
+      // 렌더링 및 스크롤 이동 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log("Capturing canvas with html2canvas...");
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 1.5, // 2보다는 낮춰서 메모리 부하 감소 및 에러 방지
+        useCORS: true,
+        backgroundColor: "#0a1628",
+        logging: true, // 라이브러리 내부 로그 활성화
+        allowTaint: true,
+        onclone: (clonedDoc) => {
+          console.log("DOM cloned for capture. Initiating final sanitization attempt...");
+          
+          try {
+            // 1. 외부 스타일시트(link) 제거 - oklab의 주요 근원 중 하나
+            const links = clonedDoc.querySelectorAll("link[rel='stylesheet']");
+            links.forEach(l => l.remove());
+
+            // 2. 모든 스타일 태그 내의 oklab/oklch 단어를 rgb로 강제 치환
+            // 파서가 'oklab'이라는 단어 자체를 인식하지 못하게 함
+            const styleTags = clonedDoc.getElementsByTagName("style");
+            for (let i = 0; i < styleTags.length; i++) {
+              styleTags[i].innerHTML = styleTags[i].innerHTML
+                .replace(/oklab/g, "rgb")
+                .replace(/oklch/g, "rgb");
+            }
+
+            // 3. 인라인 스타일 및 전체 컨테이너 HTML 치환
+            const container = clonedDoc.getElementById("report-container");
+            if (container) {
+              container.innerHTML = container.innerHTML
+                .replace(/oklab/g, "rgb")
+                .replace(/oklch/g, "rgb");
+              
+              container.style.padding = "40px";
+              container.style.backgroundColor = "#0a1628";
+              container.style.width = "1200px";
+              container.style.color = "#e2e8f0";
+            }
+
+            // 4. 모든 요소의 속성에서 oklab/oklch 제거
+            const all = clonedDoc.querySelectorAll("*");
+            all.forEach(el => {
+              for (let i = 0; i < el.attributes.length; i++) {
+                const attr = el.attributes[i];
+                if (attr.value.includes("oklab") || attr.value.includes("oklch")) {
+                  el.setAttribute(attr.name, attr.value.replace(/oklab/g, "rgb").replace(/oklch/g, "rgb"));
+                }
+              }
+            });
+
+            // 5. 강력한 전역 오버라이드 (그림자, 필터 등 에러 유발 요소 제거)
+            const forceStyle = clonedDoc.createElement("style");
+            forceStyle.innerHTML = `
+              * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                filter: none !important;
+                backdrop-filter: none !important;
+                transition: none !important;
+                animation: none !important;
+              }
+              :root, .dark, * {
+                --background: #0a1628 !important;
+                --foreground: #e2e8f0 !important;
+                --card: #0f2137 !important;
+                --primary: #06b6d4 !important;
+                --secondary: #1e3a5f !important;
+                --muted: #94a3b8 !important;
+                --accent: #0ea5e9 !important;
+                --border: #1e3a5f !important;
+              }
+            `;
+            clonedDoc.head.appendChild(forceStyle);
+            
+            // Recharts 안정화
+            const charts = clonedDoc.querySelectorAll(".recharts-responsive-container");
+            charts.forEach((chart) => {
+              (chart as HTMLElement).style.width = "500px";
+              (chart as HTMLElement).style.height = "250px";
+            });
+
+          } catch (e) {
+            console.warn("Final sanitization encountered an issue:", e);
+          }
+        }
+      });
+
+      if (!canvas) {
+        throw new Error("Canvas generation failed: result is null");
+      }
+
+      console.log("Canvas generated successfully:", canvas.width, "x", canvas.height);
+      const imgData = canvas.toDataURL("image/png");
+      
+      console.log("Initializing jsPDF...");
+      // A4 규격 설정 (mm)
+      const imgWidth = 210; 
+      const pageHeight = 297;  
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+
+      // 첫 페이지
+      console.log("Adding first page to PDF...");
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // 다중 페이지 처리
+      let pageCount = 1;
+      while (heightLeft > 0) {
+        console.log(`Adding page ${++pageCount}...`);
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      console.log("Saving PDF file...");
+      pdf.save(`Forensiface_Report_${timestamp}.pdf`);
+      console.log("Report export completed successfully.");
+    } catch (error) {
+      console.error("Critical PDF Export Error:", error);
+      alert(`리포트 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}\n\n상세 내용은 브라우저 개발자 도구(F12)의 Console 탭을 확인해주세요.`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSaveResult = () => {
+    // 분석 결과는 이미 완료 시점에 DB에 기록되어 있으므로, 
+    // 사용자에게 명시적으로 히스토리에 보존되었음을 알리고 히스토리 페이지로의 안내를 제공합니다.
+    toast.success("분석 결과가 히스토리에 성공적으로 저장되었습니다.");
+    
+    // 0.8초 후 히스토리 페이지로 이동할지 묻는 확인창 표시
+    setTimeout(() => {
+      if (confirm("저장된 기록을 확인하기 위해 히스토리 페이지로 이동하시겠습니까?")) {
+        navigate("/history");
+      }
+    }, 800);
+  };
   
   // Calculate processing time
   const processingTime = useMemo(() => {
@@ -62,18 +224,38 @@ export function Result() {
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto" ref={reportRef} id="report-container">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Link to="/" className="hover:text-foreground">홈</Link>
-            <span>/</span>
-            <Link to="/analyze" className="hover:text-foreground">분석</Link>
-            <span>/</span>
-            <span>결과</span>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4" data-html2canvas-ignore>
+              <Link to="/" className="hover:text-foreground">홈</Link>
+              <span>/</span>
+              <Link to="/analyze" className="hover:text-foreground">분석</Link>
+              <span>/</span>
+              <span>결과</span>
+            </div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">분석 결과 리포트</h1>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 uppercase tracking-wider">
+                Forensic Analysis
+              </span>
+            </div>
+            <p className="text-muted-foreground">ForensiFace Xception SBI 기반 딥페이크 탐지 시스템</p>
+            <div className="text-[10px] text-muted-foreground mt-1 flex gap-3">
+              <span>분석 일시: {finished_at ? new Date(finished_at).toLocaleString('ko-KR') : 'N/A'}</span>
+              <span>•</span>
+              <span>리포트 식별자: {analysisData.id?.slice(0, 8) || 'FF-TMP-001'}</span>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold mb-2">분석 결과</h1>
-          <p className="text-muted-foreground">Xception 신경망 기반 딥페이크 탐지 리포트</p>
+          <div className="text-right hidden md:block">
+            <div className="text-2xl font-black italic tracking-tighter text-primary mb-1">
+              FORENSI<span className="text-foreground">FACE</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest">
+              AI Deepfake Detection Platform
+            </div>
+          </div>
         </div>
 
         {/* Top Summary Cards - 6 cards in one row */}
@@ -508,12 +690,23 @@ export function Result() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-4 justify-center">
-          <button className="px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-2">
-            <Download className="w-5 h-5" />
-            리포트 다운로드
+        <div className="flex flex-wrap gap-4 justify-center" data-html2canvas-ignore>
+          <button 
+            onClick={handleDownloadReport}
+            disabled={isExporting}
+            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+          >
+            {isExporting ? (
+              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <Download className="w-5 h-5" />
+            )}
+            {isExporting ? "리포트 생성 중..." : "리포트 다운로드"}
           </button>
-          <button className="px-6 py-3 rounded-lg border border-border hover:bg-card transition-colors flex items-center gap-2">
+          <button 
+            onClick={handleSaveResult}
+            className="px-6 py-3 rounded-lg border border-border hover:bg-card transition-colors flex items-center gap-2"
+          >
             <Save className="w-5 h-5" />
             결과 저장
           </button>

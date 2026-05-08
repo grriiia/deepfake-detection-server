@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { CheckCircle, XCircle, AlertTriangle, Eye, Trash2, Download, Search, Loader2 } from "lucide-react";
 import { apiClient } from "../../api/client";
 
@@ -7,6 +7,7 @@ export function History() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -208,9 +209,7 @@ export function History() {
                                 onClick={async () => {
                                   try {
                                     const res = await apiClient.get(`/analyses/${item.analysis_id}`);
-                                    window.history.pushState({ analysisData: res.data }, "", "/result");
-                                    // Trigger a re-render or navigation
-                                    window.dispatchEvent(new PopStateEvent('popstate'));
+                                    navigate("/result", { state: { analysisData: res.data } });
                                   } catch (err) {
                                     alert("상세 정보를 가져오는데 실패했습니다.");
                                   }
