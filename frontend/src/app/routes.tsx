@@ -8,6 +8,7 @@ import { Progress } from "./pages/Progress";
 import { Result } from "./pages/Result";
 import { History } from "./pages/History";
 import { Dashboard } from "./pages/Dashboard";
+import { Signup } from "./pages/Signup";
 
 export const router = createBrowserRouter([
   {
@@ -26,5 +27,9 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     Component: Login,
+  },
+  {
+    path: "/signup",
+    Component: Signup,
   },
 ]);
