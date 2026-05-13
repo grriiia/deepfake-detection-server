@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { Activity, User, LogOut } from "lucide-react";
+import { Activity, User, LogOut, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiClient } from "../../api/client";
 
@@ -64,6 +64,18 @@ export function Navigation() {
                   {item.name}
                 </Link>
               ))}
+              {/* 실시간 판별 — 별도 강조 버튼 */}
+              <Link
+                to="/live"
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors px-3 py-1.5 rounded-full border ${
+                  location.pathname === "/live"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-primary/40 text-primary hover:bg-primary/10"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                실시간 판별
+              </Link>
             </div>
 
             {isLoggedIn ? (

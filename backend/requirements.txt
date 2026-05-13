@@ -4,3 +4,11 @@ sqlalchemy
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
+httpx
+numpy
+pillow
+torch
+torchvision
+retinaface-pytorch
+efficientnet_pytorch
+tqdm

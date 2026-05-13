@@ -40,16 +40,33 @@ def load_resources():
     global _model, _face_detector
 
     if _model is None:
-        model = Detector().to(DEVICE)
-        checkpoint = torch.load(WEIGHT_PATH, map_location=DEVICE)
-        state_dict = checkpoint["model"] if isinstance(checkpoint, dict) and "model" in checkpoint else checkpoint
-        model.load_state_dict(state_dict)
-        model.eval()
-        _model = model
+        try:
+            model = Detector().to(DEVICE)
+            checkpoint = torch.load(WEIGHT_PATH, map_location=DEVICE)
+            state_dict = checkpoint["model"] if isinstance(checkpoint, dict) and "model" in checkpoint else checkpoint
+            model.load_state_dict(state_dict)
+            model.eval()
+            _model = model
+        except Exception as e:
+            if "pickle data was truncated" in str(e):
+                raise RuntimeError(f"SBI weights file is corrupted: {WEIGHT_PATH}. Please replace it.") from e
+            raise e
 
     if _face_detector is None:
-        _face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=DEVICE)
-        _face_detector.eval()
+        try:
+            _face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=DEVICE)
+            _face_detector.eval()
+        except Exception as e:
+            if "pickle data was truncated" in str(e):
+                # Suggest deleting the cache if RetinaFace weights are corrupted
+                raise RuntimeError("RetinaFace weights are corrupted. Please delete the .cache/torch/hub/checkpoints directory and try again.") from e
+            raise e
+
+    # GPU Warmup (선택 사항: 첫 요청 시 딜레이 방지)
+    if torch.cuda.is_available():
+        dummy_input = torch.zeros(1, 3, 380, 380).to(DEVICE)
+        with torch.no_grad():
+            _model(dummy_input)
 
 
 def predict_image(image_bytes: bytes) -> Dict[str, Any]:
@@ -176,10 +193,19 @@ def predict_video(video_path: str, n_frames: int = 32) -> Dict[str, Any]:
             "representative_frames": [],
         }
 
-    # AI 모델 추론
+    # AI 모델 추론 (배치 처리로 GPU 메모리 관리)
+    batch_size = 16  # 1660 Ti 6GB 환경을 고려한 적절한 배치 사이즈
+    all_preds = []
+    
     with torch.no_grad():
-        img_batch = torch.tensor(np.array(face_list)).to(DEVICE).float() / 255.0
-        preds = _model(img_batch).softmax(1)[:, 1].cpu().numpy()
+        for i in range(0, len(face_list), batch_size):
+            batch_faces = face_list[i : i + batch_size]
+            img_batch = torch.tensor(np.array(batch_faces)).to(DEVICE).float() / 255.0
+            logits = _model(img_batch)
+            probs = torch.softmax(logits, dim=1)
+            all_preds.append(probs[:, 1].cpu().numpy())
+            
+    preds = np.concatenate(all_preds)
 
     # 프레임별 최대 점수 산출 (다중 얼굴 대응)
     unique_frame_indices = sorted(list(set(idx_list)))
@@ -245,4 +271,48 @@ def predict_video(video_path: str, n_frames: int = 32) -> Dict[str, Any]:
         "frequency_spectrum": spectrum_b64,
         "texture_map": texture_b64,
         "representative_frames": representative_frames,
+    }
+
+
+# ============================================================
+# 실시간 스트리밍용: 단일 프레임(bytes) → 추론
+# ============================================================
+
+def predict_frame(frame_bytes: bytes) -> Dict[str, Any]:
+    """WebSocket 실시간 스트리밍에서 호출되는 프레임 단위 추론 함수.
+
+    - JPEG/PNG 바이너리를 받아 PIL 이미지로 변환 후 모델 추론
+    - 기존 image_transform / 캐시된 _model / _face_detector 재사용
+    - 최대 100 KB 제한으로 과도한 트래픽 방지
+    """
+    if len(frame_bytes) > 200_000:
+        return {
+            "prediction": "error",
+            "confidence": 0.0,
+            "error": "프레임 크기가 너무 큽니다 (최대 200 KB).",
+        }
+
+    load_resources()
+
+    try:
+        img_pil = Image.open(io.BytesIO(frame_bytes)).convert("RGB")
+    except Exception as e:
+        return {
+            "prediction": "error",
+            "confidence": 0.0,
+            "error": f"이미지 파싱 실패: {e}",
+        }
+
+    img_tensor = image_transform(img_pil).unsqueeze(0).to(DEVICE)
+
+    with torch.no_grad():
+        logits = _model(img_tensor)
+        probs = torch.softmax(logits, dim=1)
+        fake_score = probs[0, 1].item()
+
+    prediction = "fake" if fake_score >= 0.5 else "real"
+
+    return {
+        "prediction": prediction,
+        "confidence": round(float(fake_score), 4),
     }

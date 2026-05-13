@@ -26,6 +26,7 @@
 3.  **필요한 패키지를 설치합니다.** (처음 실행 시 1회)
     ```powershell
     pip install -r requirements.txt
+    pip install authlib python-dotenv itsdangerous
     ```
     *추가로 AI 모델 실행을 위한 `torch`, `torchvision`, `opencv-python` 등이 필요할 수 있습니다.*
 

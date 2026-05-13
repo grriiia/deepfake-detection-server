@@ -58,6 +58,9 @@ def extract_frames(filename, num_frames, model, image_size=(380, 380)):
                     phase="test",
                 )
 
+                if face_crop.size == 0:
+                    continue
+
                 face_crop = cv2.resize(face_crop, dsize=image_size).transpose((2, 0, 1))
                 croppedfaces_temp.append(face_crop)
                 idx_list_temp.append(cnt_frame)
@@ -99,19 +102,22 @@ def extract_face(frame, model, image_size=(380, 380)):
     for face_idx in range(len(faces)):
         x0, y0, x1, y1 = faces[face_idx]["bbox"]
         bbox = np.array([[x0, y0], [x1, y1]])
+        
+        face_img = crop_face(
+            frame,
+            None,
+            bbox,
+            False,
+            crop_by_bbox=True,
+            only_img=True,
+            phase="test",
+        )
+        
+        if face_img.size == 0:
+            continue
+            
         croppedfaces.append(
-            cv2.resize(
-                crop_face(
-                    frame,
-                    None,
-                    bbox,
-                    False,
-                    crop_by_bbox=True,
-                    only_img=True,
-                    phase="test",
-                ),
-                dsize=image_size,
-            ).transpose((2, 0, 1))
+            cv2.resize(face_img, dsize=image_size).transpose((2, 0, 1))
         )
 
     return croppedfaces
