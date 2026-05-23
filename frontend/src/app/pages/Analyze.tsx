@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Upload, Video, Camera, Play, Square, RotateCcw, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, Video, Camera, CheckCircle, AlertCircle, Loader2, Zap } from "lucide-react";
 import { apiClient } from "../../api/client";
 import axios from "axios";
 
 export function Analyze() {
   const [activeTab, setActiveTab] = useState<"upload" | "camera">("upload");
-  const [isRecording, setIsRecording] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
@@ -170,53 +169,26 @@ export function Analyze() {
               </div>
             )}
 
-            {/* Camera Tab */}
+            {/* Camera Tab — 실시간 판별 페이지로 이동 */}
             {activeTab === "camera" && (
               <div className="space-y-6">
-                <div className="relative rounded-xl overflow-hidden bg-card border border-border">
-                  <div className="aspect-video bg-secondary flex items-center justify-center">
-                    <Camera className="w-16 h-16 text-muted-foreground" />
+                <div className="p-10 rounded-xl border-2 border-dashed border-primary/40 bg-card flex flex-col items-center gap-5 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-primary" />
                   </div>
-                  
-                  {/* Face Alignment Guide */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-64 h-80 border-2 border-dashed border-primary/50 rounded-2xl"></div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1">실시간 딥페이크 판별</h3>
+                    <p className="text-sm text-muted-foreground">
+                      웹캠 또는 화면 공유를 통해 1초 간격으로 실시간 분석을 진행합니다.
+                    </p>
                   </div>
-                  
-                  {/* Recording Indicator */}
-                  {isRecording && (
-                    <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/90 text-destructive-foreground">
-                      <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                      <span className="text-sm font-medium">Recording</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={`flex-1 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                      isRecording
-                        ? "bg-destructive text-destructive-foreground hover:opacity-90"
-                        : "bg-primary text-primary-foreground hover:opacity-90"
-                    }`}
+                  <Link
+                    to="/live"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
                   >
-                    {isRecording ? (
-                      <>
-                        <Square className="w-5 h-5" />
-                        녹화 중지
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5" />
-                        녹화 시작
-                      </>
-                    )}
-                  </button>
-                  <button className="px-6 py-3 rounded-lg border border-border hover:bg-card transition-colors flex items-center gap-2">
-                    <RotateCcw className="w-5 h-5" />
-                    다시 찍기
-                  </button>
+                    <Zap className="w-4 h-4" />
+                    실시간 판별 시작
+                  </Link>
                 </div>
               </div>
             )}

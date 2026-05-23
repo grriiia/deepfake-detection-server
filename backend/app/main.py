@@ -9,8 +9,10 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware  # [추가] OAuth state 저장용 세션 미들웨어
 
 from app.api.v1.router import router as v1_router
+from app.api.live_deepfake import router as live_router
 from app.db.session import Base, engine
-from app.core.config import SECRET_KEY  # [추가] 세션 암호화에 사용할 키
+from app.core.config import SECRET_KEY
+from app.services.deepfake_service import load_resources # [추가] 리소스 미리 로드용
 
 # 모든 테이블 생성 (없으면 자동 생성)
 # User, Video, Analysis 테이블
@@ -33,6 +35,16 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
 )
+
+# [추가] 앱 시작 시 모델 로드 (첫 요청 시 딜레이 방지)
+@app.on_event("startup")
+async def startup_event():
+    print("[시스템] AI 모델 및 리소스 로딩 중...")
+    try:
+        load_resources()
+        print("[시스템] AI 모델 로드 완료.")
+    except Exception as e:
+        print(f"[시스템] 모델 로드 실패: {e}")
 
 # CORS 설정
 # 프론트엔드 주소를 여기에 추가
@@ -69,6 +81,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 모든 API 경로 앞에 /api/v1 이 붙음
 # 예: /api/v1/auth/login, /api/v1/videos/upload
 app.include_router(v1_router, prefix="/api/v1")
+
+# 실시간 WebSocket 엔드포인트 등록
+# 경로: ws://localhost:8000/ws/live-deepfake
+app.include_router(live_router, prefix="/ws", tags=["실시간"])
 
 
 # 헬스체크
