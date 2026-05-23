@@ -34,8 +34,9 @@ export function History() {
   };
 
   const getVerdictText = (prediction: string | null) => {
-    if (prediction === "real") return "진짜";
-    if (prediction === "fake") return "딥페이크";
+    if (prediction === "real") return "정상 가능성 높음";
+    if (prediction === "suspect") return "의심";
+    if (prediction === "fake") return "딥페이크 가능성 높음";
     return "분석 중";
   };
 
@@ -43,6 +44,8 @@ export function History() {
     switch (prediction) {
       case "real":
         return "text-green-500 bg-green-500/10 border-green-500/20";
+      case "suspect":
+        return "text-yellow-500 bg-yellow-500/10 border-yellow-500/20";
       case "fake":
         return "text-red-500 bg-red-500/10 border-red-500/20";
       default:
@@ -54,6 +57,8 @@ export function History() {
     switch (prediction) {
       case "real":
         return CheckCircle;
+      case "suspect":
+        return AlertTriangle;
       case "fake":
         return XCircle;
       default:
@@ -69,6 +74,7 @@ export function History() {
   const stats = {
     total: history.length,
     real: history.filter(h => h.prediction === "real").length,
+    suspect: history.filter(h => h.prediction === "suspect").length,
     fake: history.filter(h => h.prediction === "fake").length,
     unknown: history.filter(h => h.status !== "done").length
   };
@@ -83,22 +89,26 @@ export function History() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-5 gap-4 mb-8">
           <div className="p-6 rounded-xl bg-card border border-border">
-            <div className="text-sm text-muted-foreground mb-2">총 분석 수</div>
+            <div className="text-xs text-muted-foreground mb-2">총 분석 수</div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </div>
           <div className="p-6 rounded-xl bg-green-500/10 border border-green-500/20">
-            <div className="text-sm text-green-500 mb-2">진짜 탐지</div>
+            <div className="text-xs text-green-500 mb-2">정상 가능성 높음</div>
             <div className="text-2xl font-bold text-green-500">{stats.real}</div>
           </div>
+          <div className="p-6 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <div className="text-xs text-yellow-500 mb-2">의심 / 추가 검토</div>
+            <div className="text-2xl font-bold text-yellow-500">{stats.suspect}</div>
+          </div>
           <div className="p-6 rounded-xl bg-red-500/10 border border-red-500/20">
-            <div className="text-sm text-red-500 mb-2">딥페이크 탐지</div>
+            <div className="text-xs text-red-500 mb-2">딥페이크 가능성 높음</div>
             <div className="text-2xl font-bold text-red-500">{stats.fake}</div>
           </div>
-          <div className="p-6 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-            <div className="text-sm text-yellow-500 mb-2">분석 중/기타</div>
-            <div className="text-2xl font-bold text-yellow-500">{stats.unknown}</div>
+          <div className="p-6 rounded-xl bg-blue-500/10 border border-blue-500/20">
+            <div className="text-xs text-blue-500 mb-2">분석 중/기타</div>
+            <div className="text-2xl font-bold text-blue-500">{stats.unknown}</div>
           </div>
         </div>
 
@@ -164,7 +174,12 @@ export function History() {
                   filteredHistory.map((item) => {
                     const VerdictIcon = getVerdictIcon(item.prediction);
                     const isReal = item.prediction === "real";
-                    const displayConfidence = isReal ? (1 - item.confidence) * 100 : item.confidence * 100;
+                    const isFake = item.prediction === "fake";
+                    const displayConfidence = isReal 
+                      ? (1 - item.confidence) * 100 
+                      : isFake 
+                      ? item.confidence * 100 
+                      : Math.max(item.confidence, 1 - item.confidence) * 100;
                     
                     return (
                       <tr key={item.analysis_id} className="border-b border-border hover:bg-secondary/30 transition-colors">
@@ -188,7 +203,13 @@ export function History() {
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden max-w-[100px]">
                               <div
-                                className={`h-full rounded-full ${isReal ? 'bg-green-500' : 'bg-red-500'}`}
+                                className={`h-full rounded-full ${
+                                  item.prediction === 'real'
+                                    ? 'bg-green-500'
+                                    : item.prediction === 'suspect'
+                                    ? 'bg-yellow-500'
+                                    : 'bg-red-500'
+                                }`}
                                 style={{ width: `${item.status === 'done' ? displayConfidence : 0}%` }}
                               ></div>
                             </div>

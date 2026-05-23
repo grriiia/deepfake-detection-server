@@ -47,8 +47,9 @@ function confidenceColor(score: number) {
 function verdictLabel(v: Verdict, smoothed: number) {
   if (v === "error") return "오류";
   if (v === "no_face") return "얼굴 없음";
-  if (smoothed >= 0.5) return "딥페이크 의심";
-  return "정상";
+  if (smoothed < 0.4) return "정상 가능성 높음";
+  if (smoothed <= 0.6) return "의심 / 추가 검토 필요";
+  return "딥페이크 가능성 높음";
 }
 
 // ──────────────────────────────────────────────
@@ -325,14 +326,20 @@ export function LiveDetect() {
                       className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-semibold text-sm shadow-lg transition-all duration-300"
                       style={{
                         backgroundColor:
-                          smoothed >= 0.5 ? "rgba(239,68,68,0.85)" : "rgba(34,197,94,0.85)",
+                          smoothed < 0.4
+                            ? "rgba(34,197,94,0.85)"
+                            : smoothed <= 0.6
+                            ? "rgba(245,158,11,0.85)"
+                            : "rgba(239,68,68,0.85)",
                         backdropFilter: "blur(8px)",
                       }}
                     >
-                      {smoothed >= 0.5 ? (
-                        <ShieldAlert className="w-4 h-4" />
-                      ) : (
+                      {smoothed < 0.4 ? (
                         <ShieldCheck className="w-4 h-4" />
+                      ) : smoothed <= 0.6 ? (
+                        <AlertTriangle className="w-4 h-4" />
+                      ) : (
+                        <ShieldAlert className="w-4 h-4" />
                       )}
                       {verdictLabel(verdict, smoothed)}
                       <span className="ml-1 opacity-80 font-normal">
@@ -463,7 +470,9 @@ export function LiveDetect() {
               <ul className="text-xs text-muted-foreground space-y-1.5">
                 <li>• 얼굴이 카메라에 정면으로 보이도록 해주세요</li>
                 <li>• 1초 간격으로 자동 분석됩니다</li>
-                <li>• 50% 이상 시 딥페이크 의심 판정</li>
+                <li>• 0~40%: 정상 가능성 높음</li>
+                <li>• 40~60%: 의심 / 추가 검토 필요</li>
+                <li>• 60~100%: 딥페이크 가능성 높음</li>
                 <li>• 분석 결과는 참고용이며 법적 근거가 되지 않습니다</li>
               </ul>
             </div>

@@ -118,7 +118,12 @@ async def live_deepfake_ws(
                 recent_scores.append(confidence)
 
                 # 스무딩된 점수로 최종 판정
-                smoothed_prediction = "fake" if ema_score >= 0.5 else "real"
+                if ema_score < 0.4:
+                    smoothed_prediction = "real"
+                elif ema_score <= 0.6:
+                    smoothed_prediction = "suspect"
+                else:
+                    smoothed_prediction = "fake"
 
                 await websocket.send_json({
                     "prediction": smoothed_prediction,
