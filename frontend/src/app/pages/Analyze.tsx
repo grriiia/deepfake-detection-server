@@ -40,9 +40,9 @@ export function Analyze() {
       // 서버에서 전달해준 video_id 추출
       const { video_id } = response.data;
 
-      await apiClient.post(`/analyses/${video_id}/analyze`, {}, {
-          headers: { "Authorization": `Bearer ${token}` },
-      }); 
+      // await apiClient.post(`/analyses/${video_id}/analyze`, {}, {
+      //     headers: { "Authorization": `Bearer ${token}` },
+      // }); 
 
       // 분석 대기 페이지(Progress)로 이동하면서 video_id 전달
       navigate("/progress", { state: { videoId: video_id } });

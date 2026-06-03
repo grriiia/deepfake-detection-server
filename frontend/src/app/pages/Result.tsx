@@ -32,8 +32,20 @@ export function Result() {
   } = analysisData;
 
   const isReal = prediction === "real";
-  const displayPrediction = isReal ? "진짜" : "가짜";
-  const displayConfidence = isReal ? (1 - confidence) * 100 : confidence * 100;
+  const isSuspect = prediction === "suspect";
+  const isFake = prediction === "fake";
+
+  const displayPrediction = isReal
+    ? "정상 가능성 높음"
+    : isSuspect
+    ? "의심 / 추가 검토 필요"
+    : "딥페이크 가능성 높음";
+
+  const displayConfidence = isReal
+    ? (1 - confidence) * 100
+    : isFake
+    ? confidence * 100
+    : Math.max(confidence, 1 - confidence) * 100;
 
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -215,6 +227,11 @@ export function Result() {
     "프레임 간 특징 일관성이 높으며 급격한 변화 없음",
     "합성 경계선이나 블렌딩 아티팩트가 탐지되지 않음",
     "Xception 모델의 깊은 특징 맵에서 이상 패턴 발견되지 않음",
+  ] : isSuspect ? [
+    "일부 프레임 구간에서 특징 일관성의 경미한 저하가 관찰됨",
+    "얼굴 경계면 혹은 조명 변화 구간에서 불완전한 프레임 존재",
+    "미세한 아티팩트 혹은 노이즈 패턴이 의심을 자아냄",
+    "최종 판단을 내리기에 신뢰도가 다소 불분명하므로 교차 검증 요망",
   ] : [
     "얼굴 경계면에서 비정상적인 텍스처 불연속성 감지",
     "특정 프레임 구간에서 특징 일관성이 급격히 저하됨",
@@ -261,7 +278,13 @@ export function Result() {
         {/* Top Summary Cards - 6 cards in one row */}
         <div className="grid grid-cols-6 gap-4 mb-8">
           {/* 최종 판정 - 더 넓게 */}
-          <div className={`col-span-2 p-6 rounded-xl border ${isReal ? 'bg-green-500/10 to-emerald-500/10 border-green-500/20' : 'bg-red-500/10 to-rose-500/10 border-red-500/20'}`}>
+          <div className={`col-span-2 p-6 rounded-xl border ${
+            isReal
+              ? 'bg-green-500/10 to-emerald-500/10 border-green-500/20'
+              : isSuspect
+              ? 'bg-yellow-500/10 to-amber-500/10 border-yellow-500/20'
+              : 'bg-red-500/10 to-rose-500/10 border-red-500/20'
+          }`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">최종 판정</span>
@@ -273,11 +296,19 @@ export function Result() {
               </div>
               {isReal ? (
                 <CheckCircle className="w-5 h-5 text-green-500" />
+              ) : isSuspect ? (
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-red-500" />
               )}
             </div>
-            <div className={`text-3xl font-bold ${isReal ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`text-3xl font-bold ${
+              isReal
+                ? 'text-green-500'
+                : isSuspect
+                ? 'text-yellow-500'
+                : 'text-red-500'
+            }`}>
               {displayPrediction}
             </div>
           </div>
@@ -411,7 +442,11 @@ export function Result() {
           <div className="p-6 rounded-xl bg-card border border-border">
             <h3 className="font-semibold mb-4">AI 분석 요약</h3>
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              Xception 모델이 분석한 결과, 영상은 {isReal ? '실제 얼굴의 자연스러운 특징 패턴을 보입니다.' : '인위적으로 조작된 특징 패턴이 다수 발견되었습니다.'} {isReal ? '딥페이크에서 흔히 나타나는 합성 아티팩트가 탐지되지 않았습니다.' : '프레임 전반에서 높은 조작 가능성이 확인되었습니다.'}
+              {isReal
+                ? "Xception 모델이 분석한 결과, 영상은 실제 얼굴의 자연스러운 특징 패턴을 보입니다. 딥페이크에서 흔히 나타나는 합성 아티팩트가 탐지되지 않았습니다."
+                : isSuspect
+                ? "Xception 모델이 분석한 결과, 영상은 일부 구간에서 의심스러운 패턴을 보이고 있어 추가적인 검토가 필요합니다. 합성 아티팩트가 일부 존재하거나 특징 패턴이 다소 불안정합니다."
+                : "Xception 모델이 분석한 결과, 영상은 인위적으로 조작된 특징 패턴이 다수 발견되었습니다. 프레임 전반에서 높은 조작 가능성이 확인되었습니다."}
             </p>
             <div className="space-y-3">
               <h4 className="text-sm font-semibold">주요 증거:</h4>
@@ -646,8 +681,8 @@ export function Result() {
 
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div className="flex justify-between p-3 rounded-lg bg-secondary">
-              <span className="text-muted-foreground">임계값</span>
-              <span className="font-medium">0.5</span>
+              <span className="text-muted-foreground">임계값 (정상/의심/딥페이크)</span>
+              <span className="font-medium">0.4 / 0.6</span>
             </div>
             <div className="flex justify-between p-3 rounded-lg bg-secondary">
               <span className="text-muted-foreground">검증 데이터셋</span>

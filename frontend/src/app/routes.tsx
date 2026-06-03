@@ -23,7 +23,7 @@ export const router = createBrowserRouter([
       { path: "result", Component: Result },
       { path: "history", Component: History },
       { path: "dashboard", Component: Dashboard },
-      { path: "live/:role", Component: LiveDetect }, // 수정
+      { path: "live", Component: LiveDetect },
     ],
   },
   {
