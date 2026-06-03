@@ -1,7 +1,3 @@
-# ============================================================
-# app/models/analysis.py - Analysis DB 모델
-# Xception 기반 딥페이크 분석 결과 저장
-# ============================================================
 
 import uuid
 from datetime import datetime
