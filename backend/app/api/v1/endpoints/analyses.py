@@ -15,6 +15,7 @@ from app.models.analysis import Analysis
 from app.schemas.analysis import AnalysisOut
 from app.api.deps import get_current_user
 from app.services.deepfake_service import predict_video
+from app.api.deps import get_current_user, get_current_admin
 
 router = APIRouter()
 
@@ -198,3 +199,33 @@ def delete_analysis(
     db.delete(analysis)
     db.commit()
     return {"message": "삭제되었습니다"}
+
+@router.get("/admin/all")
+def get_all_analyses_for_admin(
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    analyses = (
+        db.query(Analysis, User, Video)
+        .join(User, Analysis.user_id == User.id)
+        .join(Video, Analysis.video_id == Video.id)
+        .order_by(Analysis.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "analysis_id": a.id,
+            "username": u.username,
+            "user_id": u.id,
+            "video_id": v.id,
+            "filename": v.filename,
+            "uploaded_at": v.created_at,
+            "analyzed_at": a.created_at,
+            "finished_at": a.finished_at,
+            "status": a.status,
+            "prediction": a.prediction,
+            "confidence": a.confidence,
+        }
+        for a, u, v in analyses
+    ]

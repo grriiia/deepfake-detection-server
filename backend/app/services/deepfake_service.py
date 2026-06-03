@@ -11,7 +11,13 @@ import numpy as np
 from typing import Dict, Any, List, Optional
 from PIL import Image
 from torchvision import transforms
-from retinaface.pre_trained_models import get_model
+try:
+    from retinaface.pre_trained_models import get_model
+except Exception:  # retinaface not available
+    get_model = None  # type: ignore
+    # Simple placeholder that returns None; face detection will be skipped.
+    # You may replace this with another face detector later.
+
 
 from app.ai.model import Detector
 from app.ai.preprocess import extract_frames
@@ -52,16 +58,21 @@ def load_resources():
                 raise RuntimeError(f"SBI weights file is corrupted: {WEIGHT_PATH}. Please replace it.") from e
             raise e
 
+    # Attempt to load RetinaFace model if available
     if _face_detector is None:
-        try:
-            _face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=DEVICE)
-            _face_detector.eval()
-        except Exception as e:
-            if "pickle data was truncated" in str(e):
-                # Suggest deleting the cache if RetinaFace weights are corrupted
-                raise RuntimeError("RetinaFace weights are corrupted. Please delete the .cache/torch/hub/checkpoints directory and try again.") from e
-            raise e
-
+        if get_model is not None:
+            try:
+                _face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=DEVICE)
+                _face_detector.eval()
+            except Exception as e:
+                if "pickle data was truncated" in str(e):
+                    # Suggest deleting the cache if RetinaFace weights are corrupted
+                    raise RuntimeError("RetinaFace weights are corrupted. Please delete the .cache/torch/hub/checkpoints directory and try again.") from e
+                raise e
+        else:
+            # retinaface not installed; skip face detection
+            _face_detector = None
+    
     # GPU Warmup (선택 사항: 첫 요청 시 딜레이 방지)
     if torch.cuda.is_available():
         dummy_input = torch.zeros(1, 3, 380, 380).to(DEVICE)
@@ -81,7 +92,12 @@ def predict_image(image_bytes: bytes) -> Dict[str, Any]:
         probs = torch.softmax(logits, dim=1)
         fake_score = probs[0, 1].item()
 
-    prediction = "fake" if fake_score >= 0.5 else "real"
+    if fake_score < 0.4:
+        prediction = "real"
+    elif fake_score <= 0.6:
+        prediction = "suspect"
+    else:
+        prediction = "fake"
 
     return {
         "prediction": prediction,
@@ -217,8 +233,13 @@ def predict_video(video_path: str, n_frames: int = 32) -> Dict[str, Any]:
     # 결과 통계 계산
     frame_scores = np.array(frame_scores)
     final_score = float(frame_scores.mean())
-    prediction = "fake" if final_score >= 0.5 else "real"
-    manipulated_count = int(np.sum(frame_scores >= 0.5))
+    if final_score < 0.4:
+        prediction = "real"
+    elif final_score <= 0.6:
+        prediction = "suspect"
+    else:
+        prediction = "fake"
+    manipulated_count = int(np.sum(frame_scores >= 0.6))
     manipulated_ratio = float(manipulated_count / len(frame_scores))
 
     timeline = [
@@ -310,7 +331,12 @@ def predict_frame(frame_bytes: bytes) -> Dict[str, Any]:
         probs = torch.softmax(logits, dim=1)
         fake_score = probs[0, 1].item()
 
-    prediction = "fake" if fake_score >= 0.5 else "real"
+    if fake_score < 0.4:
+        prediction = "real"
+    elif fake_score <= 0.6:
+        prediction = "suspect"
+    else:
+        prediction = "fake"
 
     return {
         "prediction": prediction,

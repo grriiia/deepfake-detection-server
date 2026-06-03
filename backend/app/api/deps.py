@@ -43,3 +43,13 @@ def get_current_user(
             detail="유저를 찾을 수 없습니다",
         )
     return user
+
+def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="접근 권한이 없습니다",
+        )
+    return current_user
