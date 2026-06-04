@@ -14,12 +14,31 @@ from app.db.session import Base, engine
 from app.core.config import SECRET_KEY
 from app.services.deepfake_service import load_resources # [추가] 리소스 미리 로드용
 
+
+def apply_sqlite_schema_patches():
+    """
+    기존 SQLite DB에 새 모델 컬럼이 추가된 경우 create_all()만으로는 반영되지 않습니다.
+    시연 환경에서 기존 users.db를 유지하면서 누락 컬럼만 보강합니다.
+    """
+    with engine.begin() as conn:
+        user_columns = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()
+        }
+        if user_columns and "role" not in user_columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN role INTEGER NOT NULL DEFAULT 2"
+            )
+            print("[DB] users.role 컬럼을 추가했습니다.")
+
+
 # 모든 테이블 생성 (없으면 자동 생성)
 # User, Video, Analysis 테이블
 import app.models.user
 import app.models.video
 import app.models.analysis
 Base.metadata.create_all(bind=engine)
+apply_sqlite_schema_patches()
 
 # FastAPI 앱 생성
 app = FastAPI(
