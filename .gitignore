@@ -1,1 +1,14 @@
+*.db
+*.pyc
+__pycache__/
+
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+backend/uploaded_videos/
+backend/app/ai/weights/
+
 frontend/dist/
+frontend/node_modules/

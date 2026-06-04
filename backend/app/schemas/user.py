@@ -15,6 +15,7 @@ class UserOut(BaseModel):
     """유저 정보 응답 (비밀번호 절대 포함 금지!)"""
     id: int
     username: str
+    role: int   # 추가
 
     class Config:
         from_attributes = True  # SQLAlchemy 모델 → Pydantic 변환 허용 (V2 방식)

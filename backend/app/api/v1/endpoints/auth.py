@@ -131,6 +131,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         username=user.username,
         hashed_password=get_password_hash(user.password),
+        role=2,
     )
     db.add(db_user)
     db.commit()

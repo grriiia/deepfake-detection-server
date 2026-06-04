@@ -14,7 +14,7 @@ export function Progress() {
     { icon: Upload, label: "영상 업로드 중", status: "complete" },
     { icon: ScanFace, label: "얼굴 영역 추출 중", status: "complete" },
     { icon: Activity, label: "프레임 전처리 중", status: "active" },
-    { icon: Brain, label: "Xception 모델 추론 중", status: "pending" },
+    { icon: Brain, label: "EfficientNet-B4 모델 추론 중", status: "pending" },
     { icon: FileText, label: "리포트 생성 중", status: "pending" },
   ];
 
@@ -126,7 +126,7 @@ export function Progress() {
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold mb-2">딥페이크 특징 분석 중</h1>
                 <p className="text-muted-foreground">
-                  Xception 모델이 얼굴 영역의 합성 아티팩트를 탐지하고 있습니다
+                  EfficientNet-B4 SBI 모델이 얼굴 영역의 합성 아티팩트를 탐지하고 있습니다
                 </p>
               </div>
 
@@ -253,9 +253,9 @@ export function Progress() {
             </div>
 
             <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-              <h4 className="text-sm font-semibold mb-2 text-primary">Xception 딥러닝 분석</h4>
+              <h4 className="text-sm font-semibold mb-2 text-primary">EfficientNet-B4 SBI 분석</h4>
               <p className="text-xs text-muted-foreground">
-                사전 학습된 Xception 모델이 얼굴 영역의 미세한 텍스처 패턴과 합성 경계선을 분석하여 딥페이크 아티팩트를 탐지하고 있습니다.
+                SBI 가중치가 적용된 EfficientNet-B4 모델이 얼굴 영역의 미세한 텍스처 패턴과 합성 경계선을 분석하여 딥페이크 아티팩트를 탐지하고 있습니다.
               </p>
             </div>
           </div>

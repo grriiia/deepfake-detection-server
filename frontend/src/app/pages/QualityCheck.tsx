@@ -4,7 +4,7 @@ import { CheckCircle, AlertTriangle, XCircle, Video, Target, Sun, Footprints, Ey
 export function QualityCheck() {
   const qualityMetrics = [
     { icon: CheckCircle, label: "얼굴 감지", value: "예", status: "pass" },
-    { icon: CheckCircle, label: "ROI 가시성", value: "100%", status: "pass" },
+    { icon: CheckCircle, label: "얼굴 가시성", value: "100%", status: "pass" },
     { icon: AlertTriangle, label: "조명 품질", value: "보통", status: "warning" },
     { icon: CheckCircle, label: "모션 블러", value: "낮음", status: "pass" },
     { icon: CheckCircle, label: "가려짐", value: "없음", status: "pass" },
@@ -29,7 +29,7 @@ export function QualityCheck() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">분석 전 품질 검사</h1>
-              <p className="text-muted-foreground">비디오 품질 및 ROI 감지 검증 중</p>
+              <p className="text-muted-foreground">비디오 품질 및 얼굴 검출 상태 검증 중</p>
             </div>
             <div className="px-4 py-2 rounded-lg bg-green-500/10 text-green-500 border border-green-500/20 flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
@@ -53,7 +53,7 @@ export function QualityCheck() {
           {/* Left Panel - Video Preview */}
           <div className="lg:col-span-2 space-y-6">
             <div className="p-6 rounded-xl bg-card border border-border">
-              <h3 className="font-semibold mb-4">ROI 감지가 포함된 영상 미리보기</h3>
+              <h3 className="font-semibold mb-4">얼굴 검출이 포함된 영상 미리보기</h3>
               <div className="relative rounded-lg overflow-hidden bg-secondary">
                 <div className="aspect-video flex items-center justify-center">
                   <Video className="w-16 h-16 text-muted-foreground" />
@@ -62,17 +62,17 @@ export function QualityCheck() {
                 {/* Face Box Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="relative w-48 h-64 border-2 border-primary rounded-lg">
-                    {/* Forehead ROI */}
+                    {/* Upper face region */}
                     <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-12 border-2 border-accent rounded">
                       <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-medium text-accent whitespace-nowrap">
-                        이마 ROI
+                        상단 얼굴 영역
                       </div>
                     </div>
                     
-                    {/* Jaw ROI */}
+                    {/* Lower face region */}
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-32 h-12 border-2 border-accent rounded">
                       <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium text-accent whitespace-nowrap">
-                        턱 ROI
+                        하단 얼굴 영역
                       </div>
                     </div>
                   </div>

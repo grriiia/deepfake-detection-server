@@ -77,7 +77,7 @@ export function Login() {
               딥페이크 탐지
             </h2>
             <p className="text-lg text-muted-foreground max-w-md">
-              Xception 딥러닝 모델로 얼굴 영상의 합성 아티팩트를 탐지하는 첨단 AI 포렌식 플랫폼
+              EfficientNet-B4 SBI 모델로 얼굴 영상의 합성 아티팩트를 탐지하는 첨단 AI 포렌식 플랫폼
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ export function Login() {
                 <Activity className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold mb-1">Xception 딥러닝 분석</h4>
+                <h4 className="font-semibold mb-1">EfficientNet-B4 SBI 분석</h4>
                 <p className="text-sm text-muted-foreground">
                   과학적 정밀도로 얼굴 텍스처 패턴과 합성 흔적을 분석하는 최첨단 AI 모델
                 </p>

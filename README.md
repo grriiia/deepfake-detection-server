@@ -73,3 +73,16 @@
 
 ---
 **주의**: 분석을 위해서는 백엔드와 프론트엔드 서버가 **모두** 켜져 있어야 합니다.
+
+---
+
+## 4. 추가 사항
+ * backend -> app -> api -> v1 -> auth.py에서
+   ```powershell
+   db_user = User(
+        username=user.username,
+        hashed_password=get_password_hash(user.password),
+        role=1,  # 관리자 계정 만들 때만 임시로 1
+    )
+   ```
+ * 진행하여 관리자 계정을 만들고 나서 서버 종료 후 role=2로 수정 후 서버 재시작 하면 됩니다.

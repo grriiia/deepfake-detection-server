@@ -40,9 +40,9 @@ export function Analyze() {
       // 서버에서 전달해준 video_id 추출
       const { video_id } = response.data;
 
-      await apiClient.post(`/analyses/${video_id}/analyze`, {}, {
-          headers: { "Authorization": `Bearer ${token}` },
-      }); 
+      // await apiClient.post(`/analyses/${video_id}/analyze`, {}, {
+      //     headers: { "Authorization": `Bearer ${token}` },
+      // }); 
 
       // 분석 대기 페이지(Progress)로 이동하면서 video_id 전달
       navigate("/progress", { state: { videoId: video_id } });
@@ -56,7 +56,7 @@ export function Analyze() {
 
   const guidelines = [
     { icon: CheckCircle, text: "정면 얼굴 각도로 최소한의 회전", status: "good" },
-    { icon: CheckCircle, text: "이마와 턱 영역이 명확히 보임", status: "good" },
+    { icon: CheckCircle, text: "얼굴 전체와 주요 특징점이 명확히 보임", status: "good" },
     { icon: AlertCircle, text: "강한 그림자 없이 안정적인 조명", status: "warning" },
     { icon: CheckCircle, text: "움직임이 적고 흐림 최소화", status: "good" },
   ];
@@ -72,7 +72,7 @@ export function Analyze() {
             <span>새 분석</span>
           </div>
           <h1 className="text-3xl font-bold mb-2">새 딥페이크 분석</h1>
-          <p className="text-muted-foreground">생체 분석을 위한 비디오 업로드 또는 실시간 영상 캡처</p>
+          <p className="text-muted-foreground">딥페이크 분석을 위한 비디오 업로드 또는 실시간 영상 캡처</p>
         </div>
 
         {/* Progress Indicator */}
@@ -215,9 +215,9 @@ export function Analyze() {
             </div>
 
             <div className="p-6 rounded-xl bg-primary/10 border border-primary/20">
-              <h4 className="font-semibold mb-2 text-primary">ROI 요구사항</h4>
+              <h4 className="font-semibold mb-2 text-primary">얼굴 검출 요구사항</h4>
               <p className="text-sm text-muted-foreground mb-4">
-                정확한 분석을 위해 영상 전체에서 이마와 턱 영역이 명확하게 보여야 합니다.
+                정확한 분석을 위해 영상 전체에서 얼굴 영역이 안정적으로 검출되어야 합니다.
               </p>
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>• 최소 길이: 3초</div>

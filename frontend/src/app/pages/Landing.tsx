@@ -11,7 +11,7 @@ export function Landing() {
     {
       icon: LineChart,
       title: "딥러닝 분석",
-      description: "사전 학습된 Xception 모델이 얼굴 영역의 미세한 합성 아티팩트를 탐지합니다",
+      description: "SBI 가중치가 적용된 EfficientNet-B4 모델이 얼굴 영역의 미세한 합성 아티팩트를 탐지합니다",
     },
     {
       icon: Shield,
@@ -23,7 +23,7 @@ export function Landing() {
   const steps = [
     { number: "01", title: "업로드 또는 녹화", description: "분석할 얼굴 영상을 제공하세요" },
     { number: "02", title: "품질 검사", description: "시스템이 얼굴 가시성과 조명을 검증합니다" },
-    { number: "03", title: "AI 처리", description: "Xception 모델이 딥페이크 특징을 분석합니다" },
+    { number: "03", title: "AI 처리", description: "EfficientNet-B4 SBI 모델이 딥페이크 특징을 분석합니다" },
     { number: "04", title: "결과 확인", description: "판정이 포함된 상세 포렌식 리포트를 확인하세요" },
   ];
 
@@ -34,7 +34,7 @@ export function Landing() {
         <div className="max-w-6xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 mb-6">
             <Zap className="w-4 h-4" />
-            <span className="text-sm">Xception 딥러닝 기반</span>
+            <span className="text-sm">EfficientNet-B4 SBI 기반</span>
           </div>
           
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
@@ -44,7 +44,7 @@ export function Landing() {
           </h1>
           
           <p className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
-            사전 학습된 Xception 모델로 얼굴 영상의 미세한 합성 아티팩트와 텍스처 이상을 탐지하는 첨단 AI 포렌식 플랫폼입니다. 과학적 정밀도로 딥페이크를 분류합니다.
+            SBI 가중치가 적용된 EfficientNet-B4 모델로 얼굴 영상의 미세한 합성 아티팩트와 텍스처 이상을 탐지하는 첨단 AI 포렌식 플랫폼입니다. 과학적 정밀도로 딥페이크를 분류합니다.
           </p>
           
           <div className="flex gap-4 justify-center">
@@ -174,7 +174,7 @@ export function Landing() {
                 <span className="font-semibold">ForensiFace</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Xception 딥러닝 모델을 활용한 첨단 AI 기반 딥페이크 탐지 서비스
+                EfficientNet-B4 SBI 모델을 활용한 첨단 AI 기반 딥페이크 탐지 서비스
               </p>
             </div>
             

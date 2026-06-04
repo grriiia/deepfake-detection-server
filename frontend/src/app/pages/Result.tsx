@@ -34,14 +34,19 @@ export function Result() {
   const isReal = prediction === "real";
   const isSuspect = prediction === "suspect";
   const isFake = prediction === "fake";
+  const isUnknown = prediction === "unknown";
 
   const displayPrediction = isReal
     ? "정상 가능성 높음"
     : isSuspect
     ? "의심 / 추가 검토 필요"
-    : "딥페이크 가능성 높음";
+    : isFake
+    ? "딥페이크 가능성 높음"
+    : "얼굴 미검출 / 분석 불가";
 
-  const displayConfidence = isReal
+  const displayConfidence = isUnknown || confidence == null
+    ? 0
+    : isReal
     ? (1 - confidence) * 100
     : isFake
     ? confidence * 100
@@ -222,11 +227,16 @@ export function Result() {
     })), [confidence_timeline, isReal]
   );
 
-  const evidencePoints = isReal ? [
+  const evidencePoints = isUnknown ? [
+    "분석 가능한 얼굴 영역이 검출되지 않았습니다.",
+    "프레임에서 얼굴이 너무 작거나 흐리거나 가려졌을 수 있습니다.",
+    "정면 얼굴, 안정적인 조명, 낮은 움직임 조건에서 다시 분석해야 합니다.",
+    "현재 결과는 딥페이크 판정이 아니라 분석 불가 상태입니다.",
+  ] : isReal ? [
     "얼굴 영역 전반에서 자연스러운 텍스처 패턴이 유지됨",
     "프레임 간 특징 일관성이 높으며 급격한 변화 없음",
     "합성 경계선이나 블렌딩 아티팩트가 탐지되지 않음",
-    "Xception 모델의 깊은 특징 맵에서 이상 패턴 발견되지 않음",
+    "EfficientNet-B4 모델의 깊은 특징 맵에서 이상 패턴 발견되지 않음",
   ] : isSuspect ? [
     "일부 프레임 구간에서 특징 일관성의 경미한 저하가 관찰됨",
     "얼굴 경계면 혹은 조명 변화 구간에서 불완전한 프레임 존재",
@@ -258,7 +268,7 @@ export function Result() {
                 Forensic Analysis
               </span>
             </div>
-            <p className="text-muted-foreground">ForensiFace Xception SBI 기반 딥페이크 탐지 시스템</p>
+            <p className="text-muted-foreground">ForensiFace EfficientNet-B4 SBI 기반 딥페이크 탐지 시스템</p>
             <div className="text-[10px] text-muted-foreground mt-1 flex gap-3">
               <span>분석 일시: {finished_at ? new Date(finished_at).toLocaleString('ko-KR') : 'N/A'}</span>
               <span>•</span>
@@ -283,7 +293,9 @@ export function Result() {
               ? 'bg-green-500/10 to-emerald-500/10 border-green-500/20'
               : isSuspect
               ? 'bg-yellow-500/10 to-amber-500/10 border-yellow-500/20'
-              : 'bg-red-500/10 to-rose-500/10 border-red-500/20'
+              : isFake
+              ? 'bg-red-500/10 to-rose-500/10 border-red-500/20'
+              : 'bg-slate-500/10 border-slate-500/20'
           }`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -298,8 +310,10 @@ export function Result() {
                 <CheckCircle className="w-5 h-5 text-green-500" />
               ) : isSuspect ? (
                 <AlertTriangle className="w-5 h-5 text-yellow-500" />
-              ) : (
+              ) : isFake ? (
                 <AlertTriangle className="w-5 h-5 text-red-500" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-slate-400" />
               )}
             </div>
             <div className={`text-3xl font-bold ${
@@ -307,7 +321,9 @@ export function Result() {
                 ? 'text-green-500'
                 : isSuspect
                 ? 'text-yellow-500'
-                : 'text-red-500'
+                : isFake
+                ? 'text-red-500'
+                : 'text-slate-400'
             }`}>
               {displayPrediction}
             </div>
@@ -326,26 +342,28 @@ export function Result() {
               </div>
               <TrendingUp className="w-4 h-4 text-primary" />
             </div>
-            <div className="text-2xl font-bold">{displayConfidence.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{isUnknown ? "N/A" : `${displayConfidence.toFixed(1)}%`}</div>
           </div>
 
-          {/* 생리 신호 일관성 */}
+          {/* 얼굴 특징 일관성 */}
           <div className="p-6 rounded-xl bg-card border border-border">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">특징 일관성</span>
                 <Tooltip
                   title="특징 일관성"
-                  description="Xception 모델이 추출한 얼굴 특징이 프레임 간 얼마나 일관되게 유지되는지를 나타냅니다. 딥페이크는 프레임별로 특징 패턴이 불안정한 경향이 있습니다."
+                  description="EfficientNet-B4 모델이 추출한 얼굴 특징이 프레임 간 얼마나 일관되게 유지되는지를 나타냅니다. 딥페이크는 프레임별로 특징 패턴이 불안정한 경향이 있습니다."
                   interpretation="해석: 높을수록 자연스러운 특징 패턴 / 현재 영상 기준"
                 />
               </div>
               <Activity className="w-4 h-4 text-accent" />
             </div>
-            <div className="text-2xl font-bold">{((1 - manipulated_frame_ratio) * 100).toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {manipulated_frame_ratio == null || isUnknown ? "N/A" : `${((1 - manipulated_frame_ratio) * 100).toFixed(1)}%`}
+            </div>
           </div>
 
-          {/* ROI 간 지연 안정도 */}
+          {/* 프레임별 아티팩트 점수 */}
           <div className="p-6 rounded-xl bg-card border border-border">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -358,7 +376,9 @@ export function Result() {
               </div>
               <Zap className="w-4 h-4 text-primary" />
             </div>
-            <div className="text-2xl font-bold">{(manipulated_frame_ratio * 100).toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {manipulated_frame_ratio == null || isUnknown ? "N/A" : `${(manipulated_frame_ratio * 100).toFixed(1)}%`}
+            </div>
           </div>
 
           {/* 분석 가능 프레임 비율 */}
@@ -424,15 +444,21 @@ export function Result() {
               
               {/* Status Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                <div className="px-3 py-1.5 rounded-lg bg-green-500/90 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-2 border border-white/10">
-                  <CheckCircle className="w-3 h-3" />
-                  얼굴 추적 정상
+                <div className={`px-3 py-1.5 rounded-lg backdrop-blur-sm text-white text-xs font-medium flex items-center gap-2 border border-white/10 ${
+                  isUnknown ? "bg-slate-500/90" : "bg-green-500/90"
+                }`}>
+                  {isUnknown ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
+                  {isUnknown ? "얼굴 미검출" : "얼굴 추적 정상"}
                 </div>
-                <div className="px-3 py-1.5 rounded-lg bg-green-500/90 backdrop-blur-sm text-white text-xs font-medium border border-white/10">
-                  조명 상태: 양호
+                <div className={`px-3 py-1.5 rounded-lg backdrop-blur-sm text-white text-xs font-medium border border-white/10 ${
+                  isUnknown ? "bg-slate-500/90" : "bg-green-500/90"
+                }`}>
+                  {isUnknown ? "조명/초점 확인 필요" : "조명 상태: 양호"}
                 </div>
-                <div className="px-3 py-1.5 rounded-lg bg-blue-500/90 backdrop-blur-sm text-white text-xs font-medium border border-white/10">
-                  움직임 수준: 보통
+                <div className={`px-3 py-1.5 rounded-lg backdrop-blur-sm text-white text-xs font-medium border border-white/10 ${
+                  isUnknown ? "bg-slate-500/90" : "bg-blue-500/90"
+                }`}>
+                  {isUnknown ? "재촬영 권장" : "움직임 수준: 보통"}
                 </div>
               </div>
             </div>
@@ -442,11 +468,13 @@ export function Result() {
           <div className="p-6 rounded-xl bg-card border border-border">
             <h3 className="font-semibold mb-4">AI 분석 요약</h3>
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              {isReal
-                ? "Xception 모델이 분석한 결과, 영상은 실제 얼굴의 자연스러운 특징 패턴을 보입니다. 딥페이크에서 흔히 나타나는 합성 아티팩트가 탐지되지 않았습니다."
+              {isUnknown
+                ? "영상에서 분석 가능한 얼굴 영역을 찾지 못했습니다. 현재 결과는 딥페이크 판정이 아니라 분석 불가 상태입니다. 얼굴이 더 크게 보이고 조명과 초점이 안정적인 영상으로 다시 시도해 주세요."
+                : isReal
+                ? "EfficientNet-B4 SBI 모델이 분석한 결과, 영상은 실제 얼굴의 자연스러운 특징 패턴을 보입니다. 딥페이크에서 흔히 나타나는 합성 아티팩트가 탐지되지 않았습니다."
                 : isSuspect
-                ? "Xception 모델이 분석한 결과, 영상은 일부 구간에서 의심스러운 패턴을 보이고 있어 추가적인 검토가 필요합니다. 합성 아티팩트가 일부 존재하거나 특징 패턴이 다소 불안정합니다."
-                : "Xception 모델이 분석한 결과, 영상은 인위적으로 조작된 특징 패턴이 다수 발견되었습니다. 프레임 전반에서 높은 조작 가능성이 확인되었습니다."}
+                ? "EfficientNet-B4 SBI 모델이 분석한 결과, 영상은 일부 구간에서 의심스러운 패턴을 보이고 있어 추가적인 검토가 필요합니다. 합성 아티팩트가 일부 존재하거나 특징 패턴이 다소 불안정합니다."
+                : "EfficientNet-B4 SBI 모델이 분석한 결과, 영상은 인위적으로 조작된 특징 패턴이 다수 발견되었습니다. 프레임 전반에서 높은 조작 가능성이 확인되었습니다."}
             </p>
             <div className="space-y-3">
               <h4 className="text-sm font-semibold">주요 증거:</h4>
@@ -576,7 +604,7 @@ export function Result() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-3">Xception 모델이 판정에 주목한 얼굴 영역</p>
+              <p className="text-xs text-muted-foreground mt-3">EfficientNet-B4 모델이 판정에 주목한 얼굴 영역</p>
             </div>
 
             {/* Texture Consistency Map */}
@@ -613,84 +641,77 @@ export function Result() {
           </div>
         </div>
 
-        {/* Model Validation Performance - Clearly separated */}
+        {/* Analysis Method - derived from backend API */}
         <div className="mb-8 p-6 rounded-xl bg-secondary/30 border border-border">
           <div className="mb-4">
-            <h3 className="font-semibold text-lg mb-2">모델 검증 성능</h3>
+            <h3 className="font-semibold text-lg mb-2">분석 기준</h3>
             <p className="text-sm text-muted-foreground">
-              아래 지표는 검증 데이터셋 기준이며, 현재 영상 1건의 분석 결과와는 다릅니다.
+              아래 항목은 백엔드 API가 실제로 사용하는 판정 기준과 리포트 산출물입니다.
             </p>
           </div>
 
           <div className="grid grid-cols-4 gap-4 mb-4">
-            {/* Precision */}
             <div className="p-4 rounded-lg bg-card border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-muted-foreground">Precision</span>
+                <span className="text-sm text-muted-foreground">입력 처리</span>
                 <Tooltip
-                  title="Precision"
-                  description="모델이 '딥페이크'라고 판정한 샘플들 중 실제로 딥페이크인 비율입니다."
-                  formula="Precision = TP / (TP + FP)"
-                  interpretation="해석: 높을수록 오탐이 적음 / 검증 데이터셋 기준"
+                  title="입력 처리"
+                  description="영상에서 샘플 프레임을 추출한 뒤 RetinaFace로 얼굴 영역을 검출하고 정렬합니다."
+                  interpretation="해석: 얼굴이 안정적으로 검출될수록 분석 가능한 프레임 수가 늘어납니다."
                 />
               </div>
-              <div className="text-xl font-bold">0.912</div>
+              <div className="text-xl font-bold">RetinaFace</div>
             </div>
 
-            {/* Recall */}
             <div className="p-4 rounded-lg bg-card border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-muted-foreground">Recall</span>
+                <span className="text-sm text-muted-foreground">추론 모델</span>
                 <Tooltip
-                  title="Recall"
-                  description="실제 딥페이크 샘플들 중 모델이 올바르게 찾아낸 비율입니다."
-                  formula="Recall = TP / (TP + FN)"
-                  interpretation="해석: 높을수록 딥페이크를 덜 놓침 / 검증 데이터셋 기준"
+                  title="추론 모델"
+                  description="SBI 가중치가 적용된 EfficientNet-B4 모델이 각 얼굴 프레임의 딥페이크 점수를 계산합니다."
+                  interpretation="해석: 프레임별 점수를 평균해 최종 confidence를 산출합니다."
                 />
               </div>
-              <div className="text-xl font-bold">0.887</div>
+              <div className="text-xl font-bold">EfficientNet-B4</div>
             </div>
 
-            {/* F1-score */}
             <div className="p-4 rounded-lg bg-card border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-muted-foreground">F1-score</span>
+                <span className="text-sm text-muted-foreground">판정 임계값</span>
                 <Tooltip
-                  title="F1-score"
-                  description="Precision과 Recall을 함께 반영한 균형 성능 지표입니다."
-                  formula="F1 = 2 × (Precision × Recall) / (Precision + Recall)"
-                  interpretation="해석: 둘 중 하나만 높아도 충분하지 않음 / 검증 데이터셋 기준"
+                  title="판정 임계값"
+                  description="confidence가 0.4 미만이면 정상, 0.4 이상 0.6 이하이면 의심, 0.6 초과이면 딥페이크로 분류합니다."
+                  interpretation="해석: confidence는 모델이 계산한 딥페이크 점수입니다."
                 />
               </div>
-              <div className="text-xl font-bold">0.899</div>
+              <div className="text-xl font-bold">0.4 / 0.6</div>
             </div>
 
-            {/* PR-AUC */}
             <div className="p-4 rounded-lg bg-card border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-muted-foreground">PR-AUC</span>
+                <span className="text-sm text-muted-foreground">시각화 근거</span>
                 <Tooltip
-                  title="PR-AUC"
-                  description="판정 임계값을 바꿔가며 본 Precision-Recall 곡선의 면적입니다. 양성 클래스가 상대적으로 적은 환경에서 모델 성능을 평가할 때 특히 유용합니다."
-                  interpretation="해석: 높을수록 전반적인 양성 탐지 성능이 좋음 / 검증 데이터셋 기준"
+                  title="시각화 근거"
+                  description="가장 의심도가 높은 얼굴 프레임에서 LayerCAM, 주파수 스펙트럼, 텍스처 맵을 생성합니다."
+                  interpretation="해석: 각 이미지는 판정 보조 자료이며, 별도의 검증 성능 지표가 아닙니다."
                 />
               </div>
-              <div className="text-xl font-bold">0.924</div>
+              <div className="text-xl font-bold">LayerCAM</div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div className="flex justify-between p-3 rounded-lg bg-secondary">
-              <span className="text-muted-foreground">임계값 (정상/의심/딥페이크)</span>
-              <span className="font-medium">0.4 / 0.6</span>
+              <span className="text-muted-foreground">API confidence 의미</span>
+              <span className="font-medium">딥페이크 점수</span>
             </div>
             <div className="flex justify-between p-3 rounded-lg bg-secondary">
-              <span className="text-muted-foreground">검증 데이터셋</span>
-              <span className="font-medium">FaceForensics++</span>
+              <span className="text-muted-foreground">조작 의심 프레임 기준</span>
+              <span className="font-medium">0.6 이상</span>
             </div>
             <div className="flex justify-between p-3 rounded-lg bg-secondary">
-              <span className="text-muted-foreground">최근 평가 일시</span>
-              <span className="font-medium">2026-03-20</span>
+              <span className="text-muted-foreground">리포트 산출물</span>
+              <span className="font-medium">Timeline / CAM / FFT / Texture</span>
             </div>
           </div>
         </div>
@@ -707,11 +728,11 @@ export function Result() {
           <div className="grid md:grid-cols-4 gap-4">
             <div className="p-4 rounded-lg bg-secondary">
               <div className="font-semibold mb-1 text-sm">분석 상태</div>
-              <div className="text-sm text-muted-foreground">정상 처리됨</div>
+              <div className="text-sm text-muted-foreground">{isUnknown ? "얼굴 미검출" : "정상 처리됨"}</div>
             </div>
             <div className="p-4 rounded-lg bg-secondary">
               <div className="font-semibold mb-1 text-sm">모델 버전</div>
-              <div className="text-sm text-muted-foreground">Xception SBI</div>
+              <div className="text-sm text-muted-foreground">EfficientNet-B4 SBI</div>
             </div>
             <div className="p-4 rounded-lg bg-secondary">
               <div className="font-semibold mb-1 text-sm">추출 프레임</div>
@@ -719,7 +740,7 @@ export function Result() {
             </div>
             <div className="p-4 rounded-lg bg-secondary">
               <div className="font-semibold mb-1 text-sm">조작 의심</div>
-              <div className="text-sm text-muted-foreground">{manipulated_frame_count} 프레임</div>
+              <div className="text-sm text-muted-foreground">{isUnknown || manipulated_frame_count == null ? "N/A" : `${manipulated_frame_count} 프레임`}</div>
             </div>
           </div>
         </div>

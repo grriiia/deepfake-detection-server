@@ -24,7 +24,7 @@ Base.metadata.create_all(bind=engine)
 # FastAPI 앱 생성
 app = FastAPI(
     title="DeepGuard API",
-    description="Xception 기반 딥페이크 탐지 서비스 백엔드",
+    description="EfficientNet-B4 SBI 기반 딥페이크 탐지 서비스 백엔드",
     version="0.3.0",
     # Swagger UI: http://localhost:8000/docs
     # ReDoc:      http://localhost:8000/redoc

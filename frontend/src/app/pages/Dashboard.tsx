@@ -1,56 +1,174 @@
-import { Users, Activity, TrendingUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { useEffect, useMemo, useState } from "react"; // [추가]
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ShieldAlert,
+} from "lucide-react"; // [변경]
+import { apiClient } from "../../api/client"; // [추가]
+
+type User = {
+  id: number;
+  username: string;
+  role: number;
+};
+
+type AdminAnalysisLog = {
+  analysis_id: string;
+  username: string;
+  user_id: number;
+  video_id: string;
+  filename: string;
+  uploaded_at: string;
+  analyzed_at: string;
+  finished_at: string | null;
+  status: string;
+  prediction: "real" | "fake" | null;
+  confidence: number | null;
+};
 
 export function Dashboard() {
-  const monthlyAnalysisData = [
-    { id: "jan", month: "1월", total: 145, real: 112, fake: 28, uncertain: 5 },
-    { id: "feb", month: "2월", total: 178, real: 138, fake: 32, uncertain: 8 },
-    { id: "mar", month: "3월", total: 247, real: 189, fake: 43, uncertain: 15 },
-  ];
+  // [추가] 로그인 사용자 정보
+  const [me, setMe] = useState<User | null>(null);
 
-  const verdictDistribution = [
-    { id: "real", name: "진짜", value: 189, color: "#10b981" },
-    { id: "fake", name: "딥페이크", value: 43, color: "#ef4444" },
-    { id: "uncertain", name: "불확실", value: 15, color: "#f59e0b" },
-  ];
+  // [추가] 관리자 전체 분석 로그
+  const [logs, setLogs] = useState<AdminAnalysisLog[]>([]);
 
-  const dailyActivityData = Array.from({ length: 7 }, (_, i) => ({
-    id: `day-${i}`,
-    day: ["월", "화", "수", "목", "금", "토", "일"][i],
-    analyses: Math.floor(Math.random() * 30) + 20,
-  }));
+  // [추가] 로딩 / 에러 상태
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const recentAlerts = [
-    { id: 1, type: "high-confidence-fake", message: "고신뢰도 딥페이크가 탐지되었습니다", time: "2시간 전" },
-    { id: 2, type: "system", message: "시스템 유지보수가 예정되어 있습니다", time: "5시간 전" },
-    { id: 3, type: "quality", message: "낮은 품질의 비디오가 처리되었습니다", time: "1일 전" },
-  ];
+  // [추가] 관리자 권한 확인 후 관리자 로그 조회
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const meRes = await apiClient.get("/auth/me");
+        setMe(meRes.data);
 
-  const topUsers = [
-    { name: "연구팀 A", analyses: 89, accuracy: 96.2 },
-    { name: "보안부서", analyses: 67, accuracy: 94.8 },
-    { name: "QA팀", analyses: 54, accuracy: 97.1 },
-  ];
+        // role 1: 관리자, role 2: 일반 회원
+        if (meRes.data.role !== 1) {
+          return;
+        }
 
+        const logsRes = await apiClient.get("/analyses/admin/all");
+        setLogs(logsRes.data);
+      } catch (error: any) {
+        console.error("Dashboard load failed:", error);
+
+        if (error.response?.status === 403) {
+          setErrorMessage("접근 권한이 없습니다.");
+        } else if (error.response?.status === 401) {
+          setErrorMessage("로그인이 필요합니다.");
+        } else {
+          setErrorMessage("관리자 대시보드를 불러오는 중 오류가 발생했습니다.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
+
+  // [추가] 통계 계산
+  const stats = useMemo(() => {
+    const total = logs.length;
+    const real = logs.filter((item) => item.prediction === "real").length;
+    const fake = logs.filter((item) => item.prediction === "fake").length;
+    const pending = logs.filter((item) => item.status !== "done").length;
+
+    const doneLogs = logs.filter(
+      (item) => item.status === "done" && item.confidence !== null
+    );
+
+    const avgConfidence =
+      doneLogs.length > 0
+        ? doneLogs.reduce((sum, item) => sum + (item.confidence ?? 0), 0) /
+          doneLogs.length
+        : 0;
+
+    return {
+      total,
+      real,
+      fake,
+      pending,
+      avgConfidence,
+    };
+  }, [logs]);
+
+  // [추가] 판정 텍스트
+  const getPredictionText = (prediction: AdminAnalysisLog["prediction"]) => {
+    if (prediction === "real") return "진짜";
+    if (prediction === "fake") return "딥페이크";
+    return "-";
+  };
+
+  // [추가] 상태 텍스트
+  const getStatusText = (status: string) => {
+    if (status === "done") return "완료";
+    if (status === "failed") return "실패";
+    if (status === "running") return "분석 중";
+    if (status === "pending") return "대기 중";
+    return status;
+  };
+
+  // [추가] 로딩 화면
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span>관리자 대시보드를 불러오는 중...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // [추가] 일반 회원 접근 제한 화면
+  if (!me || me.role !== 1) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4">
+        <div className="max-w-3xl mx-auto p-8 rounded-xl bg-card border border-border text-center">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8 text-destructive" />
+          </div>
+
+          <h1 className="text-2xl font-bold mb-3">접근 권한이 없습니다</h1>
+          <p className="text-muted-foreground">
+            관리자만 접근할 수 있는 페이지입니다.
+          </p>
+
+          {errorMessage && (
+            <p className="mt-4 text-sm text-destructive">{errorMessage}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // [변경] 기존 더미 차트 대시보드 → 실제 관리자 분석 로그 대시보드
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
-          <p className="text-muted-foreground">시스템 개요 및 분석 통계</p>
+          <p className="text-muted-foreground">
+            사용자별 영상 업로드 및 딥페이크 분석 기록을 확인합니다.
+          </p>
         </div>
 
-        {/* Key Metrics */}
+        {/* [변경] 실제 로그 기반 통계 카드 */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="p-6 rounded-xl bg-card border border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Activity className="w-6 h-6 text-primary" />
               </div>
-              <span className="text-xs text-green-500">+12.5%</span>
             </div>
-            <div className="text-2xl font-bold mb-1">247</div>
+            <div className="text-2xl font-bold mb-1">{stats.total}</div>
             <div className="text-sm text-muted-foreground">총 분석 수</div>
           </div>
 
@@ -59,10 +177,9 @@ export function Dashboard() {
               <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                 <CheckCircle className="w-6 h-6 text-green-500" />
               </div>
-              <span className="text-xs text-green-500">+8.2%</span>
             </div>
-            <div className="text-2xl font-bold mb-1">76.5%</div>
-            <div className="text-sm text-muted-foreground">진짜 탐지율</div>
+            <div className="text-2xl font-bold mb-1">{stats.real}</div>
+            <div className="text-sm text-muted-foreground">진짜 판정</div>
           </div>
 
           <div className="p-6 rounded-xl bg-card border border-border">
@@ -70,130 +187,157 @@ export function Dashboard() {
               <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center">
                 <XCircle className="w-6 h-6 text-red-500" />
               </div>
-              <span className="text-xs text-red-500">+15.3%</span>
             </div>
-            <div className="text-2xl font-bold mb-1">17.4%</div>
-            <div className="text-sm text-muted-foreground">딥페이크 탐지율</div>
+            <div className="text-2xl font-bold mb-1">{stats.fake}</div>
+            <div className="text-sm text-muted-foreground">딥페이크 판정</div>
           </div>
 
           <div className="p-6 rounded-xl bg-card border border-border">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-yellow-500" />
               </div>
-              <span className="text-xs text-green-500">+2.1%</span>
             </div>
-            <div className="text-2xl font-bold mb-1">93.2%</div>
-            <div className="text-sm text-muted-foreground">평균 신뢰도</div>
+            <div className="text-2xl font-bold mb-1">{stats.pending}</div>
+            <div className="text-sm text-muted-foreground">진행 중/실패</div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          {/* Monthly Analysis Trend */}
-          <div className="p-6 rounded-xl bg-card border border-border">
-            <h3 className="font-semibold mb-4">월별 분석 추이</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyAnalysisData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f" />
-                <XAxis dataKey="month" stroke="#94a3b8" tick={{ fill: "#94a3b8" }} />
-                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8" }} />
-                <Tooltip
-                  contentStyle={{ background: "#0f2137", border: "1px solid #1e3a5f", borderRadius: "8px" }}
-                />
-                <Legend />
-                <Bar dataKey="real" fill="#10b981" name="진짜" />
-                <Bar dataKey="fake" fill="#ef4444" name="딥페이크" />
-                <Bar dataKey="uncertain" fill="#f59e0b" name="불확실" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Verdict Distribution */}
-          <div className="p-6 rounded-xl bg-card border border-border">
-            <h3 className="font-semibold mb-4">판정 분포</h3>
-            <div className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={verdictDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {verdictDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: "#0f2137", border: "1px solid #1e3a5f", borderRadius: "8px" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+        {/* [추가] 평균 신뢰도 카드 */}
+        <div className="mb-8 p-6 rounded-xl bg-card border border-border">
+          <div className="text-sm text-muted-foreground mb-2">평균 모델 신뢰도</div>
+          <div className="text-3xl font-bold">
+            {(stats.avgConfidence * 100).toFixed(1)}%
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Daily Activity */}
-          <div className="lg:col-span-2 p-6 rounded-xl bg-card border border-border">
-            <h3 className="font-semibold mb-4">일일 활동 (최근 7일)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={dailyActivityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f" />
-                <XAxis dataKey="day" stroke="#94a3b8" tick={{ fill: "#94a3b8" }} />
-                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8" }} />
-                <Tooltip
-                  contentStyle={{ background: "#0f2137", border: "1px solid #1e3a5f", borderRadius: "8px" }}
-                />
-                <Line type="monotone" dataKey="analyses" stroke="#06b6d4" strokeWidth={3} dot={{ fill: "#06b6d4", r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* [추가] 관리자 로그 테이블 */}
+        <div className="rounded-xl bg-card border border-border overflow-hidden">
+          <div className="p-6 border-b border-border">
+            <h3 className="font-semibold">전체 사용자 분석 기록</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              누가, 언제, 어떤 영상을 업로드하고 검사했는지 확인할 수 있습니다.
+            </p>
           </div>
 
-          {/* Recent Alerts */}
-          <div className="p-6 rounded-xl bg-card border border-border">
-            <h3 className="font-semibold mb-4">최근 알림</h3>
-            <div className="space-y-3">
-              {recentAlerts.map((alert) => (
-                <div key={alert.id} className="p-3 rounded-lg bg-secondary">
-                  <div className="flex items-start gap-2 mb-1">
-                    <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium mb-1">{alert.message}</div>
-                      <div className="text-xs text-muted-foreground">{alert.time}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-secondary/50">
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    사용자
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    파일명
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    업로드 시간
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    검사 요청 시간
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    완료 시간
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    판정
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    신뢰도
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">
+                    상태
+                  </th>
+                </tr>
+              </thead>
 
-        {/* Top Users */}
-        <div className="mt-6 p-6 rounded-xl bg-card border border-border">
-          <h3 className="font-semibold mb-4">상위 사용자</h3>
-          <div className="space-y-3">
-            {topUsers.map((user, index) => (
-              <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-sm text-muted-foreground">{user.analyses}회 분석</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-green-500">{user.accuracy}%</div>
-                  <div className="text-xs text-muted-foreground">정확도</div>
-                </div>
-              </div>
-            ))}
+              <tbody>
+                {logs.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-6 py-12 text-center text-muted-foreground"
+                    >
+                      아직 분석 기록이 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  logs.map((item) => (
+                    <tr
+                      key={item.analysis_id}
+                      className="border-b border-border hover:bg-secondary/30 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="font-medium">{item.username}</div>
+                        <div className="text-xs text-muted-foreground">
+                          ID: {item.user_id}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div
+                          className="font-medium truncate max-w-[220px]"
+                          title={item.filename}
+                        >
+                          {item.filename}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate max-w-[220px]">
+                          video_id: {item.video_id}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {new Date(item.uploaded_at).toLocaleString()}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {new Date(item.analyzed_at).toLocaleString()}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {item.finished_at
+                          ? new Date(item.finished_at).toLocaleString()
+                          : "-"}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-sm border ${
+                            item.prediction === "real"
+                              ? "text-green-500 bg-green-500/10 border-green-500/20"
+                              : item.prediction === "fake"
+                              ? "text-red-500 bg-red-500/10 border-red-500/20"
+                              : "text-muted-foreground bg-secondary border-border"
+                          }`}
+                        >
+                          {getPredictionText(item.prediction)}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-sm">
+                        {item.confidence !== null
+                          ? `${(item.confidence * 100).toFixed(1)}%`
+                          : "-"}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={`text-sm ${
+                            item.status === "done"
+                              ? "text-green-500"
+                              : item.status === "failed"
+                              ? "text-red-500"
+                              : "text-primary"
+                          }`}
+                        >
+                          {getStatusText(item.status)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

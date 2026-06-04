@@ -25,7 +25,7 @@ class Analysis(Base):
     prediction = Column(String, nullable=True)  # "real" / "fake"
     confidence = Column(Float,  nullable=True)  # 0.0 ~ 1.0  (AI: overall_confidence)
 
-    # Xception 분석 결과 ---------------------------------
+    # EfficientNet-B4 SBI 분석 결과 ---------------------------------
 
     # 조작된 프레임 수 (AI: manipulated_frame_count)
     manipulated_frame_count = Column(Integer, nullable=True)
